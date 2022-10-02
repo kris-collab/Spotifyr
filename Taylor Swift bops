@@ -1,0 +1,56 @@
+library(spotifyr)
+library(ggtext)
+library(showtext)
+library(tidyr)
+library(dplyr)
+library(tidyverse)
+
+
+#access spotifyr
+Sys.setenv(SPOTIFY_CLIENT_ID = clientID)
+Sys.setenv(SPOTIFY_CLIENT_SECRET = secret)
+get_access_token <- get_spotify_access_token()
+
+#Set aesthetics
+font_add_google(name = "Recursive", family = 'recursive')
+font_add_google(name = "Roboto Slab", family = "roboto slab")
+showtext_auto()
+text_col <- "#576c8e"
+bg <- "#e8e8e4"
+
+#pull data
+taylorswift <- get_artist_audio_features('taylor swift', dedupe_albums = TRUE)
+
+#wragle data
+data <- taylorswift %>%
+  select(album_name, album_release_date, danceability) %>%
+  mutate(danceability = if_else(danceability > .5, "High | Songs > .5", "Low | Songs < .5")) %>%
+group_by(album_name)
+
+#find bops
+hilo <- data %>%
+  count(album_name, danceability, name = "n_dancebility_by_album") %>%
+  filter(album_name %in% c("1989", "evermore", "Fearless (Taylor's Version)", "folklore", "Lover", "Red (Taylor's Version)", "reputation", "Speak Now", "Taylor Swift"))
+  group_by(album_name)
+
+#plot bops
+plot1 <- hilo %>%
+  ggplot(aes(x = album_name, y=n_dancebility_by_album,fill = danceability)) +
+  geom_bar(stat="identity", position = "stack") +
+  coord_flip() +
+  labs(x="Album",y="Danceability", title="Dancebility of Taylor Swift Albums", subtitle = "Moral of the Story...All Bops", legend.title = "Danceability",
+       caption = "K.Smith | Data: spotifyr") +
+  scale_fill_manual(values=c("#484f6f", "#accad7")) +
+  theme(axis.ticks = element_blank(), axis.text.y = element_text(size = 25, color=text_col, margin = margin(20,0,10,20)), axis.text.x = element_blank(),
+        plot.caption=element_text(size=25, color=text_col,hjust = .3, margin = margin(20, 0, 10, 50)), legend.text = element_text(size = 25, color=text_col),
+        legend.title = element_blank(),legend.box.background = element_rect(color=bg),
+        legend.background = element_rect(fill=bg, color=bg),legend.key = element_rect(color=bg),
+        plot.subtitle = element_text(size = 30, color = text_col,hjust=.3), axis.title = element_text(size = 25, color=text_col, hjust = .3, margin = margin(20,0,10,20)), 
+        plot.title = element_text(size=40,color=text_col, hjust = .3, face = "bold", margin = margin(20,0,10,20)),
+        plot.background = element_rect(fill = bg, color=bg),
+        panel.grid = element_blank(), panel.background = element_rect(fill=bg,color=bg))
+
+plot(plot1)
+
+#Save plot
+ggsave("TSbops.png", height = 7, width = 9.73, bg=bg)
